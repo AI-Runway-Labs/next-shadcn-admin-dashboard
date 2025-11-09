@@ -9,13 +9,21 @@ import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } 
 
 interface BalanceResponse {
   balance: number;
-  currency: string;
+  currency?: string;
+  message?: string;
+}
+
+interface NetBurnResponse {
+  netBurn: number;
+  currency?: string;
   message?: string;
 }
 
 export function SectionCards() {
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [netBurn, setNetBurn] = useState<number | null>(null);
+  const [isLoadingNetBurn, setIsLoadingNetBurn] = useState(true);
   const [currency, setCurrency] = useState<string>("USD");
 
   useEffect(() => {
@@ -39,7 +47,38 @@ export function SectionCards() {
     fetchBalance();
   }, []);
 
+  useEffect(() => {
+    const fetchNetBurn = async () => {
+      try {
+        const response = await fetch("/api/cash-tracker/net-burn");
+        if (!response.ok) {
+          throw new Error("Failed to fetch net burn");
+        }
+        const data: NetBurnResponse = await response.json();
+        setNetBurn(data.netBurn);
+        setCurrency(data.currency ?? "USD");
+      } catch (error) {
+        console.error("Error fetching net burn:", error);
+        setNetBurn(0);
+      } finally {
+        setIsLoadingNetBurn(false);
+      }
+    };
+
+    fetchNetBurn();
+  }, []);
+
   const formatBalance = (amount: number | null): string => {
+    if (amount === null) return "$0.00";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const formatNetBurn = (amount: number | null): string => {
     if (amount === null) return "$0.00";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -80,8 +119,17 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>New Customers</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">1,234</CardTitle>
+          <CardDescription>Net Burn</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {isLoadingNetBurn ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                <span>Loading...</span>
+              </div>
+            ) : (
+              formatNetBurn(netBurn)
+            )}
+          </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingDown />
@@ -91,9 +139,9 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period <TrendingDown className="size-4" />
+            Monthly cash burn rate <TrendingDown className="size-4" />
           </div>
-          <div className="text-muted-foreground">Acquisition needs attention</div>
+          <div className="text-muted-foreground">Expenses minus revenue</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
