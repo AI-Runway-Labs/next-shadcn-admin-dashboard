@@ -49,7 +49,7 @@ export const sidebarItems: NavGroup[] = [
     label: "Dashboards",
     items: [
       {
-        title: "Default",
+        title: "Cash Runway",
         url: "/dashboard/default",
         icon: LayoutDashboard,
       },
