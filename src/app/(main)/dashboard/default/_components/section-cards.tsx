@@ -19,11 +19,18 @@ interface NetBurnResponse {
   message?: string;
 }
 
+interface RunwayResponse {
+  runwayMonths: number;
+  message?: string;
+}
+
 export function SectionCards() {
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [netBurn, setNetBurn] = useState<number | null>(null);
   const [isLoadingNetBurn, setIsLoadingNetBurn] = useState(true);
+  const [runwayMonths, setRunwayMonths] = useState<number | null>(null);
+  const [isLoadingRunway, setIsLoadingRunway] = useState(true);
   const [currency, setCurrency] = useState<string>("USD");
 
   useEffect(() => {
@@ -68,6 +75,26 @@ export function SectionCards() {
     fetchNetBurn();
   }, []);
 
+  useEffect(() => {
+    const fetchRunway = async () => {
+      try {
+        const response = await fetch("/api/cash-tracker/runway-estimation");
+        if (!response.ok) {
+          throw new Error("Failed to fetch runway estimation");
+        }
+        const data: RunwayResponse = await response.json();
+        setRunwayMonths(data.runwayMonths);
+      } catch (error) {
+        console.error("Error fetching runway estimation:", error);
+        setRunwayMonths(0);
+      } finally {
+        setIsLoadingRunway(false);
+      }
+    };
+
+    fetchRunway();
+  }, []);
+
   const formatBalance = (amount: number | null): string => {
     if (amount === null) return "$0.00";
     return new Intl.NumberFormat("en-US", {
@@ -86,6 +113,12 @@ export function SectionCards() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const formatRunway = (months: number | null): string => {
+    if (months === null) return "0 months";
+    if (months === 1) return "1 month";
+    return `${months} months`;
   };
 
   return (
@@ -146,8 +179,17 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Active Accounts</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">45,678</CardTitle>
+          <CardDescription>Runway Estimation</CardDescription>
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            {isLoadingRunway ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                <span>Loading...</span>
+              </div>
+            ) : (
+              formatRunway(runwayMonths)
+            )}
+          </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUp />
@@ -157,9 +199,9 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong user retention <TrendingUp className="size-4" />
+            Estimated months remaining <TrendingUp className="size-4" />
           </div>
-          <div className="text-muted-foreground">Engagement exceed targets</div>
+          <div className="text-muted-foreground">Based on current burn rate</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
